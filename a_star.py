@@ -2,8 +2,8 @@ import pygame as pg
 import math
 import random
 
-rows = 100
-columns = 100
+rows = 200
+columns = 200
 
 pg.init()
 
@@ -73,11 +73,17 @@ class Point:
         self.wall = False
 
         randint = random.random()
-        if randint < 0.35:
+        if randint < 0.45:
             self.wall = True
 
     def show(self, surface, color, width_factor, height_factor):
         pg.draw.rect(surface, color, (self.x*width_factor, self.y*height_factor, width_factor - 1, height_factor - 1))
+    
+    def show_line(self, surface, color, width_factor, height_factor, next_x, next_y):
+        pg.draw.aaline(surface, color, (self.x*width_factor + width_factor/2, self.y*height_factor + height_factor/2), (next_x*width_factor + width_factor/2, next_y*height_factor + height_factor/2))
+    
+    def show_circle(self, surface, color, width_factor, height_factor):
+        pg.draw.ellipse(surface, color, (self.x*width_factor + width_factor/4, self.y*height_factor + height_factor/4, width_factor/2, height_factor/2))
 
     def get_neighbours(self, width, height):
         # Neighbour directions are in order: North, East, South, West
@@ -119,7 +125,6 @@ WHITE = (255, 255, 255)
 
 frontier = PQueue()
 visited_nodes = []
-optimal_path = []
 
 search_grid = [[Point(x,y,columns, rows) for y in range(columns)] for x in range(rows)]
 start_point = search_grid[0][0]
@@ -134,21 +139,18 @@ def show_grid(grid):
     global BLACK
     global WHITE
 
-    screen.fill(BLACK)
+    screen.fill(WHITE)
     for c in range(len(grid)):
         for r in range(len(grid[c])):
-            if not grid[c][r].wall:
-                grid[c][r].show(screen, WHITE, width_factor, height_factor)
-
+            if grid[c][r].wall:
+                grid[c][r].show_circle(screen, BLACK, width_factor, height_factor)
 
 def show_searches():
     global frontier
     global visited_nodes
-    for i in range(len(frontier.heap)):
-        frontier.heap[i].show(screen, GREEN, width_factor, height_factor)
 
-    for j in range(len(visited_nodes)):
-        visited_nodes[j].show(screen, RED, width_factor, height_factor)
+    for j in range(len(visited_nodes)-1, 0, -1):
+        visited_nodes[j].show_line(screen, BLUE, width_factor, height_factor, visited_nodes[j-1].x, visited_nodes[j-1].y)
 
 def h(point):
     "Calculates heuristic value for a given point to the end of grid."
@@ -176,11 +178,6 @@ while running:
         current_point = frontier.pop()
         visited_nodes.append(current_point)
         if current_point.x == end_point.x and current_point.y == end_point.y:
-            # Get optimal path from parent pointers of end point.
-            optimal_path.append(current_point)
-            while current_point.parent:
-                optimal_path.append(current_point.parent)
-                current_point = current_point.parent
             end_reached = True
 
         for position in current_point.neighbours:
@@ -197,22 +194,22 @@ while running:
                 if neighbour not in frontier.heap:
                     neighbour.parent = current_point
                     frontier.push(neighbour)
-        show_searches()
+        
+        show_grid(search_grid)
+        optimal_path = []
+        optimal_path.append(current_point)
+        while current_point.parent:
+            optimal_path.append(current_point.parent)
+            current_point = current_point.parent
+        for i in range(len(optimal_path)-1, 0, -1):
+            optimal_path[i].show_line(screen, RED, width_factor, height_factor, optimal_path[i-1].x, optimal_path[i-1].y)
         pg.display.flip()
     
-    if end_reached:
-        # Show optimal path.
-        if not path_printed:
-            show_grid(search_grid)
-            for i in range(len(optimal_path)):
-                optimal_path[i].show(screen, BLUE, width_factor, height_factor)
-            pg.display.flip()
-            path_printed = True
-    elif not furthest_printed:
+    if not end_reached and not furthest_printed:
         # Show furthest path reached.
         show_grid(search_grid)
         for i in range(len(visited_nodes)):
-            visited_nodes[i].show(screen, BLUE, width_factor, height_factor)
+            visited_nodes[i].show_line(screen, RED, width_factor, height_factor)
         pg.display.flip()
         furthest_printed = True
     
