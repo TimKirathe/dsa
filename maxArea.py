@@ -16,3 +16,6 @@ def maxArea(self, height: List[int]) -> int:
             else:
                 right -= 1
         return area
+# Added below to show alternative solutions for width & height, which are less time efficient than the if statements used above.
+# width = min(height[left], height[right])
+# area = max(area, length * width)
