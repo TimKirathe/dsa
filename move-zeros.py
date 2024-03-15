@@ -1,6 +1,6 @@
 # Task: Given an array of numbers, move all the zeros in the array to the right of all non-zeros, while keeping the ordering of the other numbers in the array.
 
-# Conceptual Idea: Think about it as moving all non-zeros to the left of the zeros. Use two pointers. The first is used to iterate though every element in the array. The second, to keep track of ... (Going to come back to adding this)
+# Conceptual Idea: Think about it as moving all non-zeros to the left of the zeros. Use two pointers. The first is used to iterate though every element in the array. The second, to keep track of the leftmost zero in the array. Whenever a non-zero is detected, switch the position of that non-zero number with the leftmost zero and increment the zero-pointer by 1.  
   
 # Complexity: The time complexity of this solution is tightly bounded at O(n), because achieving a full solution requires you to iterate through the list at least once to evaluate each number, but this way of sorting the list iterates through it at most once as well. The space complexity is O(1), because I'm only modifying the initial array. 
 
