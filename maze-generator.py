@@ -1,17 +1,24 @@
 # Implements depth-first search with backtracking to generate the maze.
 import pyglet as pyg
 import random
+from PQueue import PQueue
+from Point import Point
+import math
 
 # Initial definitions and global variables
 line_width = 1
-rows = 60
-columns = 60
+rows = 5 
+columns = 5
 lines_list = [] 
 squares = []
 grid = None
 current_point = None
 current_square = None
 explored_points = []
+maze_completed = False
+end_reached = False
+optimal_path = []
+maze = None
 
 screen_width = 700
 screen_height = 700
@@ -26,42 +33,6 @@ BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-GOLD = (206, 196, 51)
-
-# Class definitions
-class Point:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        # Boundaries represent the walls of the point in the grid. Order is: North, East, South, West.
-        self.north_wall = True
-        self.east_wall = True
-        self.south_wall = True
-        self.west_wall = True
-        self.visited = False
-
-    def get_random_neighbour(self, grid_width, grid_height, grid):
-        neighbours = []
-        if self.x > 0:
-            west_neighbour = grid[self.x-1][self.y]
-            if not west_neighbour.visited:
-                neighbours.append(west_neighbour)
-        if self.y < grid_height - 1:
-            north_neighbour = grid[self.x][self.y+1]
-            if not north_neighbour.visited:
-                neighbours.append(north_neighbour)
-        if self.x < grid_width - 1:
-            east_neighbour = grid[self.x+1][self.y]
-            if not east_neighbour.visited:
-                neighbours.append(east_neighbour)
-        if self.y > 0:
-            south_neighbour = grid[self.x][self.y-1]
-            if not south_neighbour.visited:
-                neighbours.append(south_neighbour)
-        
-        if len(neighbours) > 0:
-            return random.choice(neighbours)
-        return None
 
 def draw_walls(point):
     global lines_list
@@ -106,7 +77,7 @@ def setup():
     global height_factor
     global batch
     global explored_points
-    grid = [[Point(x,y) for y in range(columns)] for x in range(rows)]
+    grid = [[Point(x,y,columns,rows) for y in range(columns)] for x in range(rows)]
     grid[0][0].visited = True
     current_point = grid[0][0]    
     for r in range(len(grid)):
@@ -122,6 +93,12 @@ def draw(delta_time):
     global columns
     global explored_points
     global grid
+    global maze_completed
+    global pyg
+    global maze
+    global current_square
+    # if maze_completed:
+    #     return
     draw_current_point(current_point)
     next_neighbour = current_point.get_random_neighbour(columns, rows, grid) 
     if next_neighbour:
@@ -133,7 +110,77 @@ def draw(delta_time):
     elif len(explored_points) > 0:
         current_point = explored_points.pop()
 
-    
+    if len(explored_points) == 0:
+        maze_completed = True
+        current_square = None
+        print('Hey')
+
+def h(point):
+    "Calculates heuristic value for a given point to the end of grid."
+    global end_point
+    # Manhattan distance.
+    # return abs(end_point.x - point.x) + abs(end_point.y - point.y)
+    # Euclidean Distance.
+    return math.sqrt((end_point.x - point.x)**2 + (end_point.y - point.y)**2)
+
+frontier = PQueue()
+visited_nodes = []
+def draw2(delta_time):
+    global lines_list
+    global current_point
+    global frontier
+    global visited_nodes
+    global end_point
+    global end_reached
+    if len(frontier.heap) > 0 and not end_reached:
+        # print(f'frontier is: {frontier.heap}')
+        cp = frontier.pop()
+        # print(f'frontier is: {frontier.heap}')
+        visited_nodes.append(cp)
+        if cp.x == end_point.x and cp.y == end_point.y:
+            end_reached = True
+        
+        # print(f'Current point walls: {cp.north_wall}, {cp.east_wall}, {cp.south_wall}, {cp.west_wall}')
+        # print(f'Current point: {cp.x}, {cp.y}')
+        for position in cp.neighbours:
+            neighbour_x, neighbour_y, orientation = position
+            # print(f'Neighbour x: {neighbour_x} | Neighbour y: {neighbour_y}')
+            if orientation == "north" and cp.south_wall:
+                continue
+            elif orientation == "east" and cp.east_wall:
+                continue
+            elif orientation == "south" and cp.north_wall:
+                continue
+            elif orientation == "west" and cp.west_wall:
+                continue
+            neighbour = grid[neighbour_x][neighbour_y]
+            # print(f'Neighbour is: {neighbour.x}, {neighbour.y}')
+            # print(f'frontier is: {frontier.heap}')
+            if neighbour not in visited_nodes:
+                tentativeg = cp.g + 1
+
+                if neighbour in frontier.heap:
+                    neighbour.g = max(neighbour.g, tentativeg)
+
+                neighbour.f = neighbour.g + h(neighbour)
+
+                if neighbour not in frontier.heap:
+                    neighbour.parent = cp
+                    frontier.push(neighbour)
+
+        draw_optimal_path(cp)
+
+def draw_optimal_path(point):
+    global optimal_path
+    global width_factor
+    global height_factor
+    global batch
+    global screen_height
+    global GREEN
+    square = pyg.shapes.BorderedRectangle(point.x*width_factor, (-(point.y*height_factor)+screen_height)-height_factor, width_factor, height_factor, border=0, color=GREEN, batch=batch)
+    square.opacity = 100
+    optimal_path.append(square)
+
 def remove_walls(current_point, next_neighbour):
     global lines_list
     if current_point.y - 1 == next_neighbour.y:
@@ -170,10 +217,23 @@ def get_index(i, k, l):
     return (4 * columns * i) + (4*k) + l
 
 setup()
-pyg.clock.schedule_interval(draw, 1/30)
+start_point = current_point
+end_point = grid[-1][-1]
+frontier.push(start_point)
+maze = pyg.clock.schedule_interval(draw, 1/30)
+
+search_started = False
+
 @screen.event
 def on_draw():
     screen.clear()
     batch.draw()
-
+    global maze_completed
+    global maze
+    global search_started
+    global pyg
+    if maze_completed and not search_started:
+        search_started = True
+        pyg.clock.unschedule(maze)
+        pyg.clock.schedule_interval(draw2, 1/30)
 pyg.app.run()

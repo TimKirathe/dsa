@@ -14,7 +14,6 @@ screen_width = 800
 screen_height = 800
 width_factor = screen_width // columns
 height_factor = screen_height // rows
-margin = 0
 
 # Implements a priority queue with the min-heap datatype.
 class PQueue:
