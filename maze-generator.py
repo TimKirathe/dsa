@@ -259,7 +259,15 @@ def on_draw():
     if maze_completed and not search_started:
         search_started = True
         clk.unschedule(draw_maze)
-        clk.schedule_interval(draw_search, 1/30)
+        clk.schedule_interval(draw_search, 1/3000)
 
 # Runs the pyglet app.
 pyg.app.run()
+
+
+# To run properly make sure to have pyglet installed.
+# If you don't have pyglet run this on terminal: pip install pyglet
+# Example run:
+#  python3 maze-generator.py 50 50
+#  * Will generate a 50 x 50 maze, the numbers must be the same
+# Note: You must also pull PQueue.py & Point.py from same repo
