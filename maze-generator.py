@@ -4,11 +4,22 @@ import random
 from PQueue import PQueue
 from Point import Point
 import math
+import sys
+
 
 # Initial definitions and global variables
 line_width = 1
-rows = 5 
-columns = 5
+rows = int(sys.argv[1]) 
+columns = int(sys.argv[2])
+
+if not rows and not columns:
+    print('Invalid parameters. You must give both a row number and column number.')
+    sys.exit()
+elif rows != columns:
+    print('Rows and Columns must be equal.')
+    sys.exit()
+
+
 lines_list = [] 
 squares = []
 grid = None
@@ -18,7 +29,7 @@ explored_points = []
 maze_completed = False
 end_reached = False
 optimal_path = []
-maze = None
+search_started = False
 
 screen_width = 700
 screen_height = 700
@@ -27,14 +38,16 @@ width_factor = screen_width // columns
 height_factor = screen_height // rows
 
 batch = pyg.graphics.Batch()
+clk = pyg.clock.get_default()
 
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
+
+# Draw functions
 def draw_walls(point):
+    "Draws the walls for each point in the grid."
     global lines_list
     global width_factor
     global height_factor
@@ -53,8 +66,8 @@ def draw_walls(point):
     if point.west_wall:
         lines_list.append(pyg.shapes.Line(point.x*width_factor, -(point.y*height_factor+height_factor)+screen_height, point.x*width_factor, -(point.y*height_factor) + screen_height, line_width, WHITE, batch))
 
-
 def draw_cell(point):
+    "Draws all visited cells during the maze generation."
     global squares
     global width_factor
     global height_factor
@@ -65,40 +78,22 @@ def draw_cell(point):
     squares.append(square)
 
 def draw_current_point(cp):
+    "Draws the current point in the maze creation."
     global batch
     global current_square
     current_square = pyg.shapes.BorderedRectangle(cp.x*width_factor, (-(cp.y*height_factor)+screen_height)-height_factor, width_factor, height_factor, border=0, color=GREEN, batch=batch)
     current_square.opacity = 100
 
-def setup():
-    global current_point
-    global grid
-    global width_factor
-    global height_factor
-    global batch
-    global explored_points
-    grid = [[Point(x,y,columns,rows) for y in range(columns)] for x in range(rows)]
-    grid[0][0].visited = True
-    current_point = grid[0][0]    
-    for r in range(len(grid)):
-        for c in range(len(grid[r])):
-            draw_walls(grid[c][r])
-    current_point.visited = True
-    draw_cell(current_point)
-    
-    
-def draw(delta_time):
+def draw_maze(delta_time):
+    "Main code that draws and implements the maze creation"
     global current_point
     global rows
     global columns
     global explored_points
     global grid
     global maze_completed
-    global pyg
-    global maze
     global current_square
-    # if maze_completed:
-    #     return
+
     draw_current_point(current_point)
     next_neighbour = current_point.get_random_neighbour(columns, rows, grid) 
     if next_neighbour:
@@ -113,75 +108,28 @@ def draw(delta_time):
     if len(explored_points) == 0:
         maze_completed = True
         current_square = None
-        print('Hey')
 
-def h(point):
-    "Calculates heuristic value for a given point to the end of grid."
-    global end_point
-    # Manhattan distance.
-    # return abs(end_point.x - point.x) + abs(end_point.y - point.y)
-    # Euclidean Distance.
-    return math.sqrt((end_point.x - point.x)**2 + (end_point.y - point.y)**2)
 
-frontier = PQueue()
-visited_nodes = []
-def draw2(delta_time):
-    global lines_list
+def setup():
+    "Initial setup function for maze generation"
     global current_point
-    global frontier
-    global visited_nodes
-    global end_point
-    global end_reached
-    if len(frontier.heap) > 0 and not end_reached:
-        # print(f'frontier is: {frontier.heap}')
-        cp = frontier.pop()
-        # print(f'frontier is: {frontier.heap}')
-        visited_nodes.append(cp)
-        if cp.x == end_point.x and cp.y == end_point.y:
-            end_reached = True
-        
-        # print(f'Current point walls: {cp.north_wall}, {cp.east_wall}, {cp.south_wall}, {cp.west_wall}')
-        # print(f'Current point: {cp.x}, {cp.y}')
-        for position in cp.neighbours:
-            neighbour_x, neighbour_y, orientation = position
-            # print(f'Neighbour x: {neighbour_x} | Neighbour y: {neighbour_y}')
-            if orientation == "north" and cp.south_wall:
-                continue
-            elif orientation == "east" and cp.east_wall:
-                continue
-            elif orientation == "south" and cp.north_wall:
-                continue
-            elif orientation == "west" and cp.west_wall:
-                continue
-            neighbour = grid[neighbour_x][neighbour_y]
-            # print(f'Neighbour is: {neighbour.x}, {neighbour.y}')
-            # print(f'frontier is: {frontier.heap}')
-            if neighbour not in visited_nodes:
-                tentativeg = cp.g + 1
-
-                if neighbour in frontier.heap:
-                    neighbour.g = max(neighbour.g, tentativeg)
-
-                neighbour.f = neighbour.g + h(neighbour)
-
-                if neighbour not in frontier.heap:
-                    neighbour.parent = cp
-                    frontier.push(neighbour)
-
-        draw_optimal_path(cp)
-
-def draw_optimal_path(point):
-    global optimal_path
+    global grid
     global width_factor
     global height_factor
     global batch
-    global screen_height
-    global GREEN
-    square = pyg.shapes.BorderedRectangle(point.x*width_factor, (-(point.y*height_factor)+screen_height)-height_factor, width_factor, height_factor, border=0, color=GREEN, batch=batch)
-    square.opacity = 100
-    optimal_path.append(square)
+    global explored_points
+    grid = [[Point(x,y,columns,rows) for y in range(columns)] for x in range(rows)]
+    grid[0][0].visited = True
+    current_point = grid[0][0]    
+    for r in range(len(grid)):
+        for c in range(len(grid[r])):
+            draw_walls(grid[c][r])
+    current_point.visited = True
+    draw_cell(current_point)
+
 
 def remove_walls(current_point, next_neighbour):
+    "Removes the walls of the current point and its next neighbour for the maze creation to continue"
     global lines_list
     if current_point.y - 1 == next_neighbour.y:
         # Remove north wall of current point and south wall of it's north neighbour.
@@ -213,27 +161,105 @@ def remove_walls(current_point, next_neighbour):
         lines_list[nn_ew_index] = None
 
 def get_index(i, k, l):
+    "Gets the index of a particular wall (north, east, south, west) in lines_list which is a flattened list based on the ordering of the grid"
     global columns
     return (4 * columns * i) + (4*k) + l
 
 setup()
+clk.schedule_interval(draw_maze, 1/30)
+
+# A* search code
+
+frontier = PQueue()
+visited_nodes = []
 start_point = current_point
 end_point = grid[-1][-1]
 frontier.push(start_point)
-maze = pyg.clock.schedule_interval(draw, 1/30)
 
-search_started = False
 
+def h(point):
+    "Calculates heuristic value for a given point to the end of grid."
+    global end_point
+    # Manhattan distance.
+    # return abs(end_point.x - point.x) + abs(end_point.y - point.y)
+    # Euclidean Distance.
+    return math.sqrt((end_point.x - point.x)**2 + (end_point.y - point.y)**2)
+
+
+def draw_search(delta_time):
+    "Main code for displaying the A* search process."
+    global lines_list
+    global current_point
+    global frontier
+    global visited_nodes
+    global end_point
+    global end_reached
+    global optimal_path
+    if len(frontier.heap) > 0 and not end_reached:
+        cp = frontier.pop()
+        visited_nodes.append(cp)
+        if cp.x == end_point.x and cp.y == end_point.y:
+            end_reached = True
+        
+        for position in cp.neighbours:
+            neighbour_x, neighbour_y, orientation = position
+            if orientation == "north" and cp.south_wall:
+                continue
+            elif orientation == "east" and cp.east_wall:
+                continue
+            elif orientation == "south" and cp.north_wall:
+                continue
+            elif orientation == "west" and cp.west_wall:
+                continue
+            neighbour = grid[neighbour_x][neighbour_y]
+
+            if neighbour not in visited_nodes:
+                tentativeg = cp.g + 1
+
+                if neighbour in frontier.heap:
+                    neighbour.g = max(neighbour.g, tentativeg)
+
+                neighbour.f = neighbour.g + h(neighbour)
+
+                if neighbour not in frontier.heap:
+                    neighbour.parent = cp
+                    frontier.push(neighbour)
+
+        optimal_path = []
+        pseudo_optimal_path = []
+        pseudo_optimal_path.append(cp)
+        while cp.parent:
+            pseudo_optimal_path.append(cp.parent)
+            cp = cp.parent
+        for p in pseudo_optimal_path:
+            print(f'{p.x}, {p.y}')
+            draw_optimal_path(p)
+
+def draw_optimal_path(point):
+    "Draws the optimal path of the A* search so far"
+    global optimal_path
+    global width_factor
+    global height_factor
+    global batch
+    global screen_height
+    global WHITE
+    square = pyg.shapes.BorderedRectangle(point.x*width_factor, (-(point.y*height_factor)+screen_height)-height_factor, width_factor, height_factor, border=0, color=WHITE, batch=batch)
+    square.opacity = 100
+    optimal_path.append(square)
+
+
+# Event listener for the in-built on_draw function offered by pyglet.
 @screen.event
 def on_draw():
     screen.clear()
     batch.draw()
     global maze_completed
-    global maze
     global search_started
-    global pyg
+    global clk
     if maze_completed and not search_started:
         search_started = True
-        pyg.clock.unschedule(maze)
-        pyg.clock.schedule_interval(draw2, 1/30)
+        clk.unschedule(draw_maze)
+        clk.schedule_interval(draw_search, 1/30)
+
+# Runs the pyglet app.
 pyg.app.run()
