@@ -11,7 +11,6 @@
 
 # Complexity: Time complexity is O(n log n) bounded by Python's in-built sorted function. Space complexity is O(n) because the Counter instances that
 #             are created for each word grow as the size of the words increase.
-
 import collections
 
 def closeStrings(a, b):
