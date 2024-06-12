@@ -4,7 +4,8 @@
 #                  tree and return the rightmost node at that point. Trick to this is calculating the length of the queue at each level and only
 #                  iterating through all nodes up to that point, whilst adding their children to the end of the queue.
 
-# Complexity: Time complexity and space complexity are O(n), where n is the number of nodes in the binary tree.
+# Complexity: Time complexity and is O(n), where n is the number of nodes in the binary tree. Space complexity is O(k), where k is the number of levels
+#             in the binary tree.
 
 
 # Definition for a binary tree node.
